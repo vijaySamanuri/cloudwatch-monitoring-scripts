@@ -116,6 +116,7 @@ my $report_disk_util;
 my $report_disk_used;
 my $report_disk_avail;
 my $mem_used_incl_cache_buff;
+my $mem_avail_incl_sreclaimable;
 my @mount_path;
 my $mem_units;
 my $disk_units;
@@ -158,6 +159,7 @@ my $argv_size = @ARGV;
     'memory-units:s' => \$mem_units,
     'disk-space-units:s' => \$disk_units,
     'mem-used-incl-cache-buff' => \$mem_used_incl_cache_buff,
+    'mem-avail-incl-sreclaimable' => \$mem_avail_incl_sreclaimable,
     'verify' => \$verify,
     'from-cron' => \$from_cron,
     'verbose' => \$verbose,
@@ -511,7 +513,11 @@ if ($report_mem_util || $report_mem_used || $report_mem_avail || $report_swap_ut
   my $mem_free = $meminfo{'MemFree'} * KILO;
   my $mem_cached = $meminfo{'Cached'} * KILO;
   my $mem_buffers = $meminfo{'Buffers'} * KILO;
+  my $mem_sreclaimable = $meminfo{'SReclaimable'} * KILO;
   my $mem_avail = $mem_free;
+  if (defined($mem_avail_incl_sreclaimable)) {
+	$mem_avail += $mem_sreclaimable;
+  }
   if (!defined($mem_used_incl_cache_buff)) {
      $mem_avail += $mem_cached + $mem_buffers;
   }
@@ -522,7 +528,7 @@ if ($report_mem_util || $report_mem_used || $report_mem_avail || $report_swap_ut
   
   if ($report_mem_util) {
     my $mem_util = 0;
-    $mem_util = 100 * $mem_used / $mem_total if ($mem_total > 0);
+    $mem_util = 100 - (100 * $mem_avail / $mem_total) if ($mem_total > 0);
     add_metric('MemoryUtilization', 'Percent', $mem_util);
   }
   if ($report_mem_used) {
